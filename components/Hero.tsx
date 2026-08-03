@@ -3,14 +3,14 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { HEADLINE_STATS, AUTHORS } from "@/lib/constants";
-import { NodeGraph } from "@/components/NodeGraph";
+import { ThyroidScene } from "@/components/ThyroidScene";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-line">
-      <div className="absolute inset-0 grid-veil opacity-60" />
-      <div className="absolute inset-0">
-        <NodeGraph />
+      <div className="absolute inset-0 grid-veil opacity-40" />
+      <div className="absolute inset-0 h-[620px] md:h-[720px] pointer-events-none">
+        <ThyroidScene />
       </div>
       <div
         className="absolute inset-0"
