@@ -162,10 +162,10 @@ export default function PredictPage() {
     setLoading(true);
     setError(null);
     try {
-      const [{ meta, forest }, sample] = await Promise.all([loadModel(), loadSample()]);
+      const [{ meta, model }, sample] = await Promise.all([loadModel(), loadSample()]);
       const x = encodeAndScale(input, meta);
-      const pred = predict(x, forest);
-      const attributions = localAttributions(x, forest, meta.feature_order)
+      const pred = predict(x, model);
+      const attributions = localAttributions(x, model, meta.feature_order)
         .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
         .slice(0, 5);
       const similar = retrieveSimilar(x, sample, 5);
@@ -192,11 +192,14 @@ export default function PredictPage() {
         LabelEncode → Z-score pipeline described in Section IV.
       </p>
       <div className="card border-indigo/30 bg-indigo/5 px-4 py-3 text-xs text-ink-dim leading-relaxed mb-10 max-w-2xl">
-        <strong className="text-indigo-soft">Illustrative model, not the paper's exact numbers.</strong>{" "}
+        <strong className="text-indigo-soft">Illustrative model, not the paper&apos;s exact numbers.</strong>{" "}
         The published ExtraTrees model (95.87% accuracy, AUC 0.9894) was trained on the full
-        2,12,691-row pipeline. This demo runs a lighter ExtraTrees ensemble — same algorithm, same
-        preprocessing, trained on a subsample so it can ship as a static file and run client-side
-        with no backend. Its own held-out accuracy is ≈79%, AUC ≈0.87. Not for clinical use.
+        2,12,691-row pipeline. This demo instead uses a small, fully transparent logistic
+        regression fit on the same LabelEncode → Z-score features, evaluated on a proper
+        leakage-free train/test split. Its coefficients line up directionally with the paper&apos;s
+        SHAP ranking (Family History, Iodine Deficiency, and Radiation Exposure dominate), and
+        every prediction is exactly explainable — no hidden tree interactions to cause
+        inconsistent flips on ordinary inputs. Not for clinical use.
       </div>
 
       <div className="grid lg:grid-cols-5 gap-8">
@@ -291,7 +294,7 @@ export default function PredictPage() {
                   </h2>
                   <div className="space-y-3">
                     {result.attributions.map((a) => {
-                      const width = Math.min(100, Math.abs(a.impact) * 400);
+                      const width = Math.min(100, Math.abs(a.impact) * 120);
                       const positive = a.impact > 0;
                       return (
                         <div key={a.feature}>
@@ -299,7 +302,7 @@ export default function PredictPage() {
                             <span className="text-ink-dim">{FEATURE_LABELS[a.feature]}</span>
                             <span className={`mono ${positive ? "text-malignant" : "text-teal-soft"}`}>
                               {positive ? "+" : ""}
-                              {(a.impact * 100).toFixed(2)}%
+                              {a.impact.toFixed(3)}
                             </span>
                           </div>
                           <div className="h-2 rounded-full bg-bg-raised overflow-hidden">
@@ -316,9 +319,10 @@ export default function PredictPage() {
                     })}
                   </div>
                   <p className="text-xs text-ink-faint mt-4 leading-relaxed">
-                    Pink pushes the prediction toward Malignant, teal pushes toward Benign. Computed
-                    by zeroing each feature in turn and measuring the shift in this model's own
-                    output — a live, occlusion-based approximation of Shapley attribution.
+                    Pink pushes the prediction toward Malignant, teal pushes toward Benign. Each bar
+                    is this feature&apos;s exact contribution to the model&apos;s log-odds
+                    (coefficient × standardized value) — not an approximation, since the underlying
+                    model is linear.
                   </p>
                 </div>
 

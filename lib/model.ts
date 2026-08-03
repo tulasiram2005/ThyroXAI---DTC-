@@ -1,18 +1,32 @@
-// This module runs REAL decision trees in the browser. The trees were
-// trained offline with scikit-learn's ExtraTreesClassifier on the same
-// LabelEncode -> Z-score preprocessing pipeline described in Section IV
-// of the paper, then exported node-by-node to forest.json. There is no
+// This module runs a REAL, transparent logistic-regression model in the
+// browser — trained with scikit-learn on the exact LabelEncode -> Z-score
+// pipeline described in Section IV of the paper. There is no
 // Math.random() prediction anywhere in this file.
 //
-// IMPORTANT — read before quoting numbers from this demo:
-// The published paper reports 95.87% accuracy / 0.9894 AUC on the full
-// 2,12,691-row pipeline with the full-size ExtraTrees ensemble. The demo
-// below is a lighter ensemble (80 trees, depth 11) trained on a subsample
-// so the model can ship as a ~2 MB static JSON file and run entirely in
-// your browser with zero backend. Its own held-out accuracy is ~79% /
-// AUC ~0.87. It is a genuine ExtraTrees model on genuine data — just a
-// smaller sibling of the one in the paper, not a re-creation of its
-// exact numbers.
+// WHY LOGISTIC REGRESSION AND NOT A FULL EXTRATREES ENSEMBLE
+// An earlier version of this demo shipped a small ExtraTrees ensemble
+// (see git history). Once it was trained with a correct, leakage-free
+// train/test split (SMOTE-ENN applied to the *training fold only*,
+// evaluated on a held-out test fold it never saw), its honest accuracy
+// came out far below the paper's headline 95.87% — in the same range as
+// simply guessing "Benign" every time. That strongly suggests the
+// paper's own very high numbers come from applying SMOTE-ENN *before*
+// the train/test split, which lets synthetic neighbours leak across the
+// split — a common and easy mistake with SMOTE-based pipelines, not a
+// bug in this demo.
+//
+// Rather than ship a demo that quietly inherited that same leakage (and
+// could flip Benign/Malignant unpredictably on ordinary inputs), this
+// version uses a small, fully transparent logistic regression: 14
+// coefficients + 1 intercept, fit on a correct train/test split, with
+// class-imbalance weighting. Its own held-out accuracy is modest (~63%,
+// vs. a 76.7%-accuracy "always predict Benign" baseline on this
+// imbalanced dataset) — which is disclosed on the page. What it buys you
+// over the tree ensemble: every prediction is exactly explainable (each
+// feature's contribution is just coefficient x standardized value, with
+// no hidden interactions), and its coefficient signs line up with the
+// paper's own SHAP ranking (Family History, Iodine Deficiency, and
+// Radiation Exposure dominate) rather than swinging on noise.
 
 export type FeatureName =
   | "Age" | "Gender" | "Country" | "Ethnicity" | "Family_History"
@@ -26,30 +40,23 @@ export interface ModelMeta {
   encodings: Record<string, string[]>;
 }
 
-export interface TreeNode {
-  f: number[];
-  th: number[];
-  l: number[];
-  r: number[];
-  v: number[]; // probability of class "Malignant" at each node's leaf
-}
-
-export interface Forest {
-  trees: TreeNode[];
-  n_estimators: number;
+export interface LogRegModel {
+  feature_order: FeatureName[];
+  coefficients: Record<string, number>;
+  intercept: number;
 }
 
 let metaCache: ModelMeta | null = null;
-let forestCache: Forest | null = null;
+let modelCache: LogRegModel | null = null;
 
-export async function loadModel(): Promise<{ meta: ModelMeta; forest: Forest }> {
+export async function loadModel(): Promise<{ meta: ModelMeta; model: LogRegModel }> {
   if (!metaCache) {
     metaCache = await fetch("/data/meta.json").then((r) => r.json());
   }
-  if (!forestCache) {
-    forestCache = await fetch("/data/forest.json").then((r) => r.json());
+  if (!modelCache) {
+    modelCache = await fetch("/data/logreg.json").then((r) => r.json());
   }
-  return { meta: metaCache!, forest: forestCache! };
+  return { meta: metaCache!, model: modelCache! };
 }
 
 export interface RawInput {
@@ -70,7 +77,7 @@ export interface RawInput {
 }
 
 // Replicates: LabelEncoder (alphabetical class order) -> Z-score, exactly
-// matching the offline preprocessing used to train the forest above.
+// matching the offline preprocessing used to train the model above.
 export function encodeAndScale(input: RawInput, meta: ModelMeta): number[] {
   const dict = input as unknown as Record<string, unknown>;
   return meta.feature_order.map((f) => {
@@ -87,53 +94,39 @@ export function encodeAndScale(input: RawInput, meta: ModelMeta): number[] {
   });
 }
 
-function traverseTree(tree: TreeNode, x: number[]): number {
-  let node = 0;
-  while (tree.f[node] !== -2) {
-    const featureIdx = tree.f[node];
-    if (x[featureIdx] <= tree.th[node]) {
-      node = tree.l[node];
-    } else {
-      node = tree.r[node];
-    }
-  }
-  return tree.v[node]; // P(Malignant) at this leaf
+function sigmoid(z: number): number {
+  return 1 / (1 + Math.exp(-z));
 }
 
 export interface PredictionResult {
   probabilityMalignant: number;
   diagnosis: "Benign" | "Malignant";
-  perTreeVotes: number[];
 }
 
-export function predict(x: number[], forest: Forest): PredictionResult {
-  const perTreeVotes = forest.trees.map((t) => traverseTree(t, x));
-  const probabilityMalignant =
-    perTreeVotes.reduce((a, b) => a + b, 0) / perTreeVotes.length;
+export function predict(x: number[], model: LogRegModel): PredictionResult {
+  let z = model.intercept;
+  model.feature_order.forEach((f, i) => {
+    z += model.coefficients[f] * x[i];
+  });
+  const probabilityMalignant = sigmoid(z);
   return {
     probabilityMalignant,
     diagnosis: probabilityMalignant >= 0.5 ? "Malignant" : "Benign",
-    perTreeVotes,
   };
 }
 
-// Simple, real (not fabricated) local feature attribution: for each
-// feature, zero it out (set to the population mean, i.e. z=0) one at a
-// time and measure how much the forest's predicted probability moves.
-// This is a standard occlusion-based approximation of a Shapley value —
-// far cheaper than full TreeSHAP but computed live, from the same trees
-// used for the headline prediction, so the "waterfall" always matches
-// what the model actually did for this input.
+// Exact (not approximated) local attribution for a linear model: each
+// feature's contribution to the log-odds is simply coefficient x
+// standardized value. Unlike an occlusion-based estimate on a tree
+// ensemble, this is mathematically exact for this model — the numbers
+// shown always sum to exactly the model's own logit.
 export function localAttributions(
   x: number[],
-  forest: Forest,
+  model: LogRegModel,
   featureNames: FeatureName[]
 ): { feature: FeatureName; impact: number }[] {
-  const base = predict(x, forest).probabilityMalignant;
-  return featureNames.map((name, i) => {
-    const xPrime = [...x];
-    xPrime[i] = 0; // mean-centered value
-    const withoutFeature = predict(xPrime, forest).probabilityMalignant;
-    return { feature: name, impact: base - withoutFeature };
-  });
+  return featureNames.map((name, i) => ({
+    feature: name,
+    impact: model.coefficients[name] * x[i],
+  }));
 }

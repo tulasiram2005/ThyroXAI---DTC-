@@ -118,9 +118,11 @@ export function ShapSection() {
             )}
             <p className="text-xs text-ink-faint mt-2">
               Each dot is one patient from a 600-record sample. Color = feature value (blue = low,
-              red = high). Computed with <code className="mono">shap.TreeExplainer</code> on the
-              same lightweight ExtraTrees model that powers the live demo — not fabricated. Feature
-              ranking may differ slightly from the paper's full-scale model above.
+              red = high). This demo&apos;s model is linear, so each point is an{" "}
+              <strong className="text-ink-dim">exact</strong> contribution
+              (coefficient × standardized value) rather than an approximation — computed on real
+              data, not fabricated. Feature ranking may differ slightly from the paper&apos;s
+              full-scale ExtraTrees model above.
             </p>
           </div>
         </Reveal>

@@ -1,0 +1,35 @@
+{
+  "feature_order": [
+    "Age",
+    "Gender",
+    "Country",
+    "Ethnicity",
+    "Family_History",
+    "Radiation_Exposure",
+    "Iodine_Deficiency",
+    "Smoking",
+    "Obesity",
+    "Diabetes",
+    "TSH_Level",
+    "T3_Level",
+    "T4_Level",
+    "Nodule_Size"
+  ],
+  "coefficients": {
+    "Age": -0.002217,
+    "Gender": -0.006006,
+    "Country": -0.052832,
+    "Ethnicity": -0.241004,
+    "Family_History": 0.319399,
+    "Radiation_Exposure": 0.189765,
+    "Iodine_Deficiency": 0.240025,
+    "Smoking": 0.000811,
+    "Obesity": -0.004522,
+    "Diabetes": -0.011013,
+    "TSH_Level": -0.010019,
+    "T3_Level": -0.005536,
+    "T4_Level": 0.005463,
+    "Nodule_Size": -0.004651
+  },
+  "intercept": -0.067467
+}
