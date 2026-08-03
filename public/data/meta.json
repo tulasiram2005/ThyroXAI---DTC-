@@ -1,0 +1,103 @@
+{
+  "feature_order": [
+    "Age",
+    "Gender",
+    "Country",
+    "Ethnicity",
+    "Family_History",
+    "Radiation_Exposure",
+    "Iodine_Deficiency",
+    "Smoking",
+    "Obesity",
+    "Diabetes",
+    "TSH_Level",
+    "T3_Level",
+    "T4_Level",
+    "Nodule_Size"
+  ],
+  "means": {
+    "Age": 51.918496786417855,
+    "Gender": 0.40041186510007476,
+    "Country": 3.8569238942879576,
+    "Ethnicity": 1.7018820730543371,
+    "Family_History": 0.3000832193181658,
+    "Radiation_Exposure": 0.14979477269842165,
+    "Iodine_Deficiency": 0.24927241867309854,
+    "Smoking": 0.19949598243461172,
+    "Obesity": 0.3003700203581722,
+    "Diabetes": 0.2002576507703664,
+    "TSH_Level": 5.045102002435458,
+    "T3_Level": 2.0017266362939665,
+    "T4_Level": 8.246203976660977,
+    "Nodule_Size": 2.5034032469639054
+  },
+  "stds": {
+    "Age": 21.63281452908136,
+    "Gender": 0.4899829917216392,
+    "Country": 2.5626688931424226,
+    "Ethnicity": 1.2292114240551826,
+    "Family_History": 0.45829495776276213,
+    "Radiation_Exposure": 0.3568709816712778,
+    "Iodine_Deficiency": 0.43259283375220736,
+    "Smoking": 0.3996224296415169,
+    "Obesity": 0.45841995950867065,
+    "Diabetes": 0.4001940492728281,
+    "TSH_Level": 2.860264068976145,
+    "T3_Level": 0.8662480194769661,
+    "T4_Level": 2.1641884760070194,
+    "Nodule_Size": 1.44463073072601
+  },
+  "encodings": {
+    "Gender": [
+      "Female",
+      "Male"
+    ],
+    "Country": [
+      "Brazil",
+      "China",
+      "Germany",
+      "India",
+      "Japan",
+      "Nigeria",
+      "Russia",
+      "South Korea",
+      "UK",
+      "USA"
+    ],
+    "Ethnicity": [
+      "African",
+      "Asian",
+      "Caucasian",
+      "Hispanic",
+      "Middle Eastern"
+    ],
+    "Family_History": [
+      "No",
+      "Yes"
+    ],
+    "Radiation_Exposure": [
+      "No",
+      "Yes"
+    ],
+    "Iodine_Deficiency": [
+      "No",
+      "Yes"
+    ],
+    "Smoking": [
+      "No",
+      "Yes"
+    ],
+    "Obesity": [
+      "No",
+      "Yes"
+    ],
+    "Diabetes": [
+      "No",
+      "Yes"
+    ],
+    "Diagnosis": [
+      "Benign",
+      "Malignant"
+    ]
+  }
+}
